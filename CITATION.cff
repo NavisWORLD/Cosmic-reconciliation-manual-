@@ -5,8 +5,8 @@ type: software
 authors:
   - family-names: Davis
     given-names: Cory Shane
-version: 1.1.0
-date-released: 2026-08-12
+version: 1.2.0
+date-released: 2026-08-13
 repository-code: "https://github.com/NavisWORLD/Cosmic-reconciliation-manual-"
 identifiers:
   - type: doi
