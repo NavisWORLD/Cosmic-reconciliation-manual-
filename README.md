@@ -1,29 +1,50 @@
 # Cosmic Reconciliation Memory
 
-**Portable durable memory, reconciliation loops, and teaching material derived from the COSMOS / CST project.**
+**Portable durable memory, reconciliation loops, desktop installers, mobile companion apps, and teaching material derived from the COSMOS / CST project.**
 
 Author / research lineage: **Cory Shane Davis**  
 Foundational CST DOI: **10.5281/zenodo.17574447**  
-Package release: **v1.1.0**
+Package release: **v1.2.0**
 
-This repository turns the persistence architecture described in COSMOS into a small, model-agnostic library that another project can actually adopt. It is not tied to one LLM vendor, one operating system, one cloud, or one storage provider.
+This repository turns the persistence architecture described in COSMOS into a model-agnostic library and user-facing application suite that another project can actually adopt. It is not tied to one LLM vendor, one operating system, one cloud, or one storage provider.
 
 > **Engineering definition of “forever memory”**: durable, recoverable continuity across model calls, context truncation, process restarts, machine reboots, and portable-storage movement, until the owner explicitly deletes the data or the underlying storage fails. It does **not** mean physically infinite storage or perfect recall.
 
+## Downloadable applications
+
+The v1.2.0 distribution workflow builds and publishes these GitHub Release assets after all platform builds pass:
+
+| Platform | Release asset | Purpose |
+|---|---|---|
+| Windows | `CosmicMemory-Windows-Setup.exe` | One-click installer |
+| Windows | `CosmicMemory.exe` | Portable single-file desktop app |
+| macOS | `CosmicMemory-macOS.dmg` | DMG containing `CosmicMemory.app` |
+| macOS | `CosmicMemory-macOS.app.zip` | Direct `.app` archive |
+| Android | `CosmicMemory-Android.apk` | Installable Android APK |
+| iOS | `CosmicMemory-iOS-Simulator.app.zip` | Unsigned iOS Simulator app |
+
+The Windows and macOS desktop application is a native GUI over the canonical SQLite memory library. It can open a database, remember and recall information, inspect health/integrity, and initialize, sync, snapshot, and verify portable memory.
+
+The iOS and Android companion is an offline-first phone/tablet interface for local memories, recall, tags, importance, deletion, and JSON import/export. Physical iPhone, TestFlight, and App Store installation requires Apple Developer signing/provisioning. The public CI build intentionally does not fake or bypass Apple signing.
+
+See **[Cross-Platform Distribution](docs/DISTRIBUTION.md)** for the full packaging and signing guide.
+
 ## What is included
 
-- `cosmic_reconciliation.MemoryStore` — durable SQLite-backed event, dialogue, retrieval memory, lessons, adaptive weights, and organism/application state storage.
-- `MemoryAdapter` — wraps any callable model, injects relevant memory before generation, and persists the resulting turn.
-- `simple_recurrence_consolidation` — transparent, evidence-linked, idempotent baseline lesson consolidation.
-- `Heartbeat` — fail-soft background maintenance/checkpoint loop with observable status counters.
+- `cosmic_reconciliation.MemoryStore`: durable SQLite-backed event, dialogue, retrieval memory, lessons, adaptive weights, and organism/application state storage.
+- `MemoryAdapter`: wraps any callable model, injects relevant memory before generation, and persists the resulting turn.
+- `simple_recurrence_consolidation`: transparent, evidence-linked, idempotent baseline lesson consolidation.
+- `Heartbeat`: fail-soft background maintenance/checkpoint loop with observable status counters.
 - Portable USB / external-drive tooling with transaction-safe SQLite backup, snapshots, restore, SHA-256 verification, and SQLite integrity checking.
 - Owner-controlled `forget()` and `purge_session()` operations.
 - A dependency-free hashed-retrieval baseline, plus a hook for real embedding models.
+- Desktop GUI and Windows/macOS packaging.
+- Capacitor mobile companion for Android and iOS.
 - JSON schemas for interoperable events and portable-memory manifests.
-- Full manual, architecture guide, integration guide, API reference, recovery/migration guide, USB guide, testing protocols, privacy/security notes, and teacher manual.
-- Tests and GitHub Actions for Python 3.10–3.12.
+- Full manual, architecture guide, integration guide, API reference, recovery/migration guide, USB guide, distribution guide, testing protocols, privacy/security notes, and teacher manual.
+- Python tests on 3.10 to 3.12 plus cross-platform binary build validation.
 
-## Install
+## Install from source
 
 ```bash
 python -m pip install -e .
@@ -37,6 +58,12 @@ python -m venv .venv
 # macOS/Linux: source .venv/bin/activate
 python -m pip install -e . pytest
 pytest -q
+```
+
+Launch the desktop GUI from a Python installation:
+
+```bash
+cosmic-memory-desktop
 ```
 
 ## Five-minute integration
@@ -78,12 +105,12 @@ The adapter does four things:
 
 The reusable idea is not “one magic memory database.” The implementation keeps separate responsibilities:
 
-- **event memory** — what happened;
-- **episodic/dialogue memory** — conversations in time;
-- **retrieval memory** — information selected by relevance;
-- **consolidated memory** — derived lessons that point back to evidence;
-- **adaptive memory** — weights that change future routing/selection;
-- **organism/application state** — persistent system state.
+- **event memory**: what happened;
+- **episodic/dialogue memory**: conversations in time;
+- **retrieval memory**: information selected by relevance;
+- **consolidated memory**: derived lessons that point back to evidence;
+- **adaptive memory**: weights that change future routing/selection;
+- **organism/application state**: persistent system state.
 
 ## Full local lifecycle
 
@@ -230,6 +257,7 @@ Read **[CLAIM_BOUNDARIES.md](docs/CLAIM_BOUNDARIES.md)** before citing the syste
 - [Project Integration Guide](docs/INTEGRATION_GUIDE.md)
 - [Portable USB Memory Guide](docs/USB_PORTABLE_MEMORY.md)
 - [Recovery and Migration](docs/RECOVERY_AND_MIGRATION.md)
+- [Cross-Platform Distribution](docs/DISTRIBUTION.md)
 - [Security and Privacy](docs/SECURITY_PRIVACY.md)
 - [Test and Recovery Protocols](docs/TEST_PROTOCOLS.md)
 - [Research Lineage](docs/RESEARCH_LINEAGE.md)
@@ -250,7 +278,7 @@ The automated suite covers:
 - heartbeat maintenance/checkpoint/error accounting;
 - full portable sync → verify → snapshot → later write → restore → verify lifecycle.
 
-GitHub Actions runs the suite on Python 3.10, 3.11, and 3.12.
+GitHub Actions runs the Python suite on Python 3.10, 3.11, and 3.12. The distribution workflow additionally builds Windows, macOS, Android, and iOS artifacts on pull requests before allowing the release job on `main` to publish the binary bundle.
 
 ## Licensing
 
