@@ -70,6 +70,10 @@ CREATE TABLE IF NOT EXISTS meta (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_events_session_time ON events(session_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_dialogue_session_turn ON dialogue(session_id, turn_id);
+CREATE INDEX IF NOT EXISTS idx_memories_created ON memories(created_at);
+CREATE INDEX IF NOT EXISTS idx_lessons_score ON lessons(score, lesson_id);
 """
 
 
@@ -77,7 +81,9 @@ class MemoryStore:
     """Durable local memory store using SQLite.
 
     The store is process-persistent, portable, inspectable, and model agnostic.
-    It intentionally does not store API secrets.
+    It intentionally does not store API secrets. SQLite WAL is used for normal
+    operation; ``backup_to`` is the supported way to make a transaction-safe
+    portable copy while the store is active.
     """
 
     def __init__(self, path: str | os.PathLike[str], embedding_fn: EmbeddingFn | None = None):
@@ -85,9 +91,10 @@ class MemoryStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.embedding_fn = embedding_fn or hashed_embedding
         self._lock = threading.RLock()
-        self._conn = sqlite3.connect(self.path, check_same_thread=False)
+        self._conn = sqlite3.connect(self.path, check_same_thread=False, timeout=30.0)
         self._conn.row_factory = sqlite3.Row
         with self._conn:
+            self._conn.execute("PRAGMA busy_timeout=5000")
             self._conn.executescript(_SCHEMA)
             self._conn.execute("INSERT OR IGNORE INTO meta(key,value) VALUES('schema_version','1')")
 
@@ -103,9 +110,29 @@ class MemoryStore:
         self.close()
 
     def append_event(self, event: Event) -> str:
+        """Append an event without silently accepting an ID collision.
+
+        Replaying the exact same event is idempotent. Reusing an existing
+        ``event_id`` for different content is rejected because that would make
+        an audit trail ambiguous.
+        """
         with self._lock, self._conn:
+            existing = self._conn.execute(
+                "SELECT payload_hash,session_id,source,type FROM events WHERE event_id=?",
+                (event.event_id,),
+            ).fetchone()
+            if existing is not None:
+                same = (
+                    existing["payload_hash"] == event.payload_hash
+                    and existing["session_id"] == event.session_id
+                    and existing["source"] == event.source
+                    and existing["type"] == event.type
+                )
+                if not same:
+                    raise ValueError(f"event_id collision for {event.event_id}")
+                return event.event_id
             self._conn.execute(
-                """INSERT OR IGNORE INTO events
+                """INSERT INTO events
                 (event_id,timestamp,session_id,source,type,payload_json,payload_hash,parent_hash,metadata_json)
                 VALUES(?,?,?,?,?,?,?,?,?)""",
                 (event.event_id, event.timestamp, event.session_id, event.source, event.type,
@@ -127,6 +154,49 @@ class MemoryStore:
                  record.source_event_id, json.dumps(record.metadata, ensure_ascii=False), json.dumps(emb)),
             )
         return record.memory_id
+
+    def get_memory(self, memory_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            row = self._conn.execute("SELECT * FROM memories WHERE memory_id=?", (memory_id,)).fetchone()
+        return self._memory_row(row) if row else None
+
+    def list_memories(self, limit: int | None = None) -> list[dict[str, Any]]:
+        sql = "SELECT * FROM memories ORDER BY created_at, memory_id"
+        params: tuple[Any, ...] = ()
+        if limit is not None:
+            sql += " LIMIT ?"
+            params = (max(1, int(limit)),)
+        with self._lock:
+            rows = self._conn.execute(sql, params).fetchall()
+        return [self._memory_row(row) for row in rows]
+
+    @staticmethod
+    def _memory_row(row: sqlite3.Row) -> dict[str, Any]:
+        data = dict(row)
+        data["tags"] = json.loads(data.pop("tags_json"))
+        data["metadata"] = json.loads(data.pop("metadata_json"))
+        data["embedding"] = json.loads(data.pop("embedding_json"))
+        return data
+
+    def forget(self, memory_id: str) -> bool:
+        """Explicitly delete one durable semantic memory by ID."""
+        with self._lock, self._conn:
+            cur = self._conn.execute("DELETE FROM memories WHERE memory_id=?", (memory_id,))
+        return bool(cur.rowcount)
+
+    def purge_session(self, session_id: str, *, hard_delete_events: bool = False) -> dict[str, int]:
+        """Delete dialogue for a session and optionally its raw event records.
+
+        Event deletion is opt-in because the event table is intended as an
+        audit ledger. Privacy-sensitive deployments may choose the hard-delete
+        path explicitly.
+        """
+        with self._lock, self._conn:
+            dialogue = self._conn.execute("DELETE FROM dialogue WHERE session_id=?", (session_id,)).rowcount
+            events = 0
+            if hard_delete_events:
+                events = self._conn.execute("DELETE FROM events WHERE session_id=?", (session_id,)).rowcount
+        return {"dialogue": int(dialogue), "events": int(events)}
 
     def recall(self, query: str, limit: int = 8, min_score: float = -1.0) -> list[RecallResult]:
         q = self.embedding_fn(query)
@@ -220,7 +290,27 @@ class MemoryStore:
         with self._lock:
             return {n: int(self._conn.execute(f"SELECT COUNT(*) FROM {n}").fetchone()[0]) for n in names}
 
+    def integrity_check(self) -> dict[str, Any]:
+        """Run SQLite's own consistency check and return a structured result."""
+        with self._lock:
+            rows = [str(r[0]) for r in self._conn.execute("PRAGMA integrity_check").fetchall()]
+        return {"ok": rows == ["ok"], "messages": rows}
+
     def checkpoint(self) -> None:
         with self._lock:
             self._conn.execute("PRAGMA wal_checkpoint(FULL)")
             self._conn.commit()
+
+    def backup_to(self, destination: str | os.PathLike[str]) -> Path:
+        """Create a transaction-consistent SQLite backup, including WAL state."""
+        dest = Path(destination)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        with self._lock:
+            self._conn.commit()
+            target = sqlite3.connect(dest, timeout=30.0)
+            try:
+                self._conn.backup(target)
+                target.commit()
+            finally:
+                target.close()
+        return dest
