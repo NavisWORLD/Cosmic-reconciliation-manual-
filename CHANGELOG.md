@@ -1,6 +1,29 @@
 # Changelog
 
-## 1.1.0 — 2026-08-12
+## 1.2.0 - 2026-08-13
+
+Cross-platform application and binary distribution release.
+
+### Added
+
+- native desktop memory manager GUI;
+- `cosmic-memory-desktop` launcher;
+- PyInstaller desktop packaging;
+- one-click Windows Inno Setup installer;
+- portable Windows single-file EXE;
+- macOS `.app`, DMG, and zipped app packaging;
+- polished offline-first Capacitor mobile companion for Android and iOS;
+- installable Android APK build;
+- unsigned iOS Simulator `.app` build;
+- cross-platform distribution documentation;
+- GitHub Actions distribution matrix that validates all platform builds on pull requests;
+- automatic GitHub Release `v1.2.0` publishing after all platform jobs succeed on `main`.
+
+### Distribution boundary
+
+A physical-iPhone/TestFlight/App Store artifact requires Apple Developer signing credentials and provisioning. The public workflow produces a real iOS app build for the Simulator but intentionally does not embed private Apple signing material or bypass platform signing requirements.
+
+## 1.1.0 - 2026-08-12
 
 Completion-audit release.
 
@@ -27,6 +50,6 @@ Completion-audit release.
 
 The SQLite schema remains version 1. Existing v1.0 databases are opened in place; v1.1 adds indexes and behavior without destructive migration.
 
-## 1.0.0 — 2026-08-12
+## 1.0.0 - 2026-08-12
 
-Initial open-source release of Cosmic Reconciliation Memory with durable semantic/dialogue/event memory, adaptive weights, persistent state, reconciliation adapter, heartbeat, portable-memory tooling, manuals, teacher course, schemas, examples, and Python 3.10–3.12 CI.
+Initial open-source release of Cosmic Reconciliation Memory with durable semantic/dialogue/event memory, adaptive weights, persistent state, reconciliation adapter, heartbeat, portable-memory tooling, manuals, teacher course, schemas, examples, and Python 3.10-3.12 CI.
