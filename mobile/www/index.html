@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d1117" />
+  <title>Cosmic Memory</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div class="orb" aria-hidden="true"></div>
+      <div>
+        <p class="eyebrow">COSMIC RECONCILIATION</p>
+        <h1>Memory that travels with you.</h1>
+        <p class="sub">Local-first notes, searchable recall, portable export, and owner-controlled deletion.</p>
+      </div>
+    </header>
+
+    <section class="stats" aria-label="Memory status">
+      <article><span id="memoryCount">0</span><small>memories</small></article>
+      <article><span id="tagCount">0</span><small>tags</small></article>
+      <article><span id="healthBadge">LOCAL</span><small>storage</small></article>
+    </section>
+
+    <nav class="tabs" aria-label="App sections">
+      <button class="tab active" data-tab="recall">Recall</button>
+      <button class="tab" data-tab="remember">Remember</button>
+      <button class="tab" data-tab="vault">Vault</button>
+    </nav>
+
+    <section id="recall" class="panel active">
+      <label class="field-label" for="search">Search your memory</label>
+      <div class="search-row">
+        <input id="search" type="search" placeholder="What do you want to remember?" autocomplete="off" />
+        <button id="searchBtn" class="primary">Recall</button>
+      </div>
+      <div id="results" class="memory-list" aria-live="polite"></div>
+    </section>
+
+    <section id="remember" class="panel">
+      <label class="field-label" for="content">Memory</label>
+      <textarea id="content" rows="7" placeholder="Write something worth carrying forward..."></textarea>
+      <div class="grid-two">
+        <div>
+          <label class="field-label" for="tags">Tags</label>
+          <input id="tags" placeholder="project, family, idea" />
+        </div>
+        <div>
+          <label class="field-label" for="importance">Importance</label>
+          <input id="importance" type="range" min="0" max="1" step="0.05" value="0.7" />
+          <output id="importanceValue">0.70</output>
+        </div>
+      </div>
+      <button id="saveBtn" class="primary wide">Store memory</button>
+      <p id="saveStatus" class="status-line" role="status"></p>
+    </section>
+
+    <section id="vault" class="panel">
+      <div class="vault-actions">
+        <button id="exportBtn">Export JSON</button>
+        <label class="file-button">Import JSON<input id="importInput" type="file" accept="application/json,.json" /></label>
+        <button id="clearBtn" class="danger">Erase all local memory</button>
+      </div>
+      <p class="privacy">This mobile companion stores its data locally inside the app. Export creates a portable JSON copy you control. The desktop/Python library remains the canonical SQLite implementation.</p>
+      <div id="allMemories" class="memory-list"></div>
+    </section>
+  </main>
+
+  <template id="memoryTemplate">
+    <article class="memory-card">
+      <div class="memory-meta"><span class="score"></span><time></time></div>
+      <p class="memory-content"></p>
+      <div class="tag-row"></div>
+      <div class="card-actions"><button class="copy">Copy</button><button class="delete danger-link">Delete</button></div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
