@@ -1,0 +1,12 @@
+{
+  "appId": "world.navis.cosmicmemory",
+  "appName": "Cosmic Memory",
+  "webDir": "www",
+  "backgroundColor": "#0d1117",
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "android": {
+    "backgroundColor": "#0d1117"
+  }
+}
