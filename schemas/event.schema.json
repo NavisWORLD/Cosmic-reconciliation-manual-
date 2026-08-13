@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Cosmic Reconciliation Event",
+  "type": "object",
+  "required": ["event_id", "timestamp", "session_id", "source", "type", "payload", "payload_hash"],
+  "properties": {
+    "event_id": {"type": "string"},
+    "timestamp": {"type": "string"},
+    "session_id": {"type": "string"},
+    "source": {"type": "string"},
+    "type": {"type": "string"},
+    "payload": {"type": "object"},
+    "payload_hash": {"type": "string"},
+    "parent_hash": {"type": ["string", "null"]},
+    "metadata": {"type": "object"}
+  }
+}

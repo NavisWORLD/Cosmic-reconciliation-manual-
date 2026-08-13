@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use this software or teaching material, please cite the CST research lineage and this repository."
+title: "Cosmic Reconciliation Memory"
+type: software
+authors:
+  - family-names: Davis
+    given-names: Cory Shane
+version: 1.0.0
+date-released: 2026-08-12
+repository-code: "https://github.com/NavisWORLD/Cosmic-reconciliation-manual-"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.17574447"
+    description: "Foundational 12-Dimensional Cosmic Synapse Theory deposit"
+license: Apache-2.0

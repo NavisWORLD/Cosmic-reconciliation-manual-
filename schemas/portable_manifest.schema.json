@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Cosmic Portable Memory Manifest",
+  "type": "object",
+  "required": ["format", "version", "created_at", "database"],
+  "properties": {
+    "format": {"const": "cosmic-reconciliation-portable-memory"},
+    "version": {"type": "integer", "minimum": 1},
+    "label": {"type": "string"},
+    "created_at": {"type": "string"},
+    "database": {"type": "string"},
+    "security": {"type": "object"}
+  }
+}
