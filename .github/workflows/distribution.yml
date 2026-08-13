@@ -1,0 +1,182 @@
+name: distribution
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "desktop/**"
+      - "mobile/**"
+      - "pyproject.toml"
+      - ".github/workflows/distribution.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "desktop/**"
+      - "mobile/**"
+      - "pyproject.toml"
+      - ".github/workflows/distribution.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e . pyinstaller
+          choco install innosetup -y --no-progress
+      - name: Build portable EXE
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm --clean --onefile --windowed --name CosmicMemory --paths src desktop/CosmicMemory.py
+          if (-not (Test-Path "dist/CosmicMemory.exe")) { throw "CosmicMemory.exe was not produced" }
+      - name: Build one-click installer
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" desktop\windows_installer.iss
+          if (-not (Test-Path "dist-installer/CosmicMemory-Windows-Setup.exe")) { throw "Windows installer was not produced" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-binaries
+          path: |
+            dist/CosmicMemory.exe
+            dist-installer/CosmicMemory-Windows-Setup.exe
+          if-no-files-found: error
+
+  macos:
+    name: macOS app and DMG
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e . pyinstaller
+      - name: Build app bundle
+        run: |
+          pyinstaller --noconfirm --clean --windowed --name CosmicMemory --paths src desktop/CosmicMemory.py
+          test -d dist/CosmicMemory.app
+      - name: Package DMG and app ZIP
+        run: |
+          hdiutil create -volname "Cosmic Memory" -srcfolder dist/CosmicMemory.app -ov -format UDZO CosmicMemory-macOS.dmg
+          ditto -c -k --sequesterRsrc --keepParent dist/CosmicMemory.app CosmicMemory-macOS.app.zip
+          test -f CosmicMemory-macOS.dmg
+          test -f CosmicMemory-macOS.app.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-binaries
+          path: |
+            CosmicMemory-macOS.dmg
+            CosmicMemory-macOS.app.zip
+          if-no-files-found: error
+
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install Capacitor
+        run: npm install
+      - name: Generate Android project
+        run: |
+          npx cap add android
+          npx cap copy android
+      - name: Build installable debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk ../CosmicMemory-Android.apk
+          test -f ../CosmicMemory-Android.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-binary
+          path: mobile/CosmicMemory-Android.apk
+          if-no-files-found: error
+
+  ios:
+    name: iOS app (unsigned simulator build)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Capacitor
+        run: npm install
+      - name: Generate iOS project
+        run: |
+          npx cap add ios
+          npx cap copy ios
+      - name: Build unsigned iOS app
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphonesimulator -derivedDataPath build CODE_SIGNING_ALLOWED=NO
+          APP_PATH="build/Build/Products/Release-iphonesimulator/App.app"
+          test -d "$APP_PATH"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" CosmicMemory-iOS-Simulator.app.zip
+          test -f CosmicMemory-iOS-Simulator.app.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-binary
+          path: mobile/CosmicMemory-iOS-Simulator.app.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release v1.2.0
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [windows, macos, android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "*-binar*"
+          path: release-assets
+          merge-multiple: true
+      - name: Publish or refresh release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="v1.2.0"
+          shopt -s nullglob
+          ASSETS=(release-assets/*)
+          if [ ${#ASSETS[@]} -lt 5 ]; then
+            echo "Expected Windows EXE + installer, macOS DMG + app ZIP, Android APK, and iOS app ZIP."
+            find release-assets -maxdepth 2 -type f -print
+            exit 1
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
+          else
+            gh release create "$TAG" "${ASSETS[@]}" \
+              --target "$GITHUB_SHA" \
+              --title "Cosmic Reconciliation Memory v1.2.0" \
+              --notes "Cross-platform distribution release. Includes a one-click Windows installer, portable Windows EXE, macOS DMG and .app archive, Android APK, and unsigned iOS Simulator .app archive. The Python library, portable-memory tools, manuals, and teacher material remain included in the repository. iPhone device/App Store installation requires Apple Developer signing credentials."
+          fi

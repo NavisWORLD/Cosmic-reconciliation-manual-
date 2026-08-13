@@ -1,0 +1,19 @@
+{
+  "name": "cosmic-memory-mobile",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Cosmic Reconciliation Memory mobile companion for iOS and Android",
+  "scripts": {
+    "android": "npx cap add android && npx cap copy android",
+    "ios": "npx cap add ios && npx cap copy ios",
+    "sync": "npx cap sync"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.4.2",
+    "@capacitor/core": "8.4.2",
+    "@capacitor/ios": "8.4.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.4.2"
+  }
+}
