@@ -165,11 +165,11 @@ jobs:
         run: |
           set -euo pipefail
           TAG="v1.2.0"
-          shopt -s nullglob
-          ASSETS=(release-assets/*)
-          if [ ${#ASSETS[@]} -lt 5 ]; then
-            echo "Expected Windows EXE + installer, macOS DMG + app ZIP, Android APK, and iOS app ZIP."
-            find release-assets -maxdepth 2 -type f -print
+          mapfile -d '' ASSETS < <(find release-assets -type f -print0 | sort -z)
+          printf 'Release asset: %s\n' "${ASSETS[@]}"
+          if [ ${#ASSETS[@]} -ne 6 ]; then
+            echo "Expected exactly 6 files: Windows EXE + installer, macOS DMG + app ZIP, Android APK, and iOS app ZIP."
+            find release-assets -type f -print
             exit 1
           fi
           if gh release view "$TAG" >/dev/null 2>&1; then
