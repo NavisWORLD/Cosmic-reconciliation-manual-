@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cosmic-reconciliation-memory"
+version = "1.0.0"
+description = "Portable, model-agnostic durable memory and reconciliation loops derived from the COSMOS/CST project."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [{name = "Cory Shane Davis"}]
+keywords = ["llm", "memory", "persistent-memory", "portable-memory", "cosmos", "cst", "reconciliation"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+]
+
+[project.scripts]
+cosmic-memory = "cosmic_reconciliation.cli:main"
+
+[project.urls]
+Repository = "https://github.com/NavisWORLD/Cosmic-reconciliation-manual-"
+DOI = "https://doi.org/10.5281/zenodo.17574447"
+
+[tool.setuptools.packages.find]
+where = ["src"]
